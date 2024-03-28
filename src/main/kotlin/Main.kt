@@ -11,11 +11,13 @@ fun menu() {
     println("To upload data, please, use --data command with the file path")
 }
 
-fun readFile(input: String): File { // return null
+fun readFile(input: String): File {
     val file = File(input)
 
-    println(if (file.exists()) "File is successfully uploaded!"
-    else "Warning: file not found.")
+    println(
+        if (file.exists()) "File is successfully uploaded!"
+        else "Warning: file not found."
+    )
 
     return file
 }
@@ -32,7 +34,7 @@ fun search(file: File, enquiry: String): List<String> {
     val result: MutableList<String> = mutableListOf()
 
     file.forEachLine {
-        if(it.contains(enquiry, ignoreCase = true)) {
+        if (it.contains(enquiry, ignoreCase = true)) {
             result.add(it)
         }
     }
@@ -43,8 +45,7 @@ fun search(file: File, enquiry: String): List<String> {
 fun output(result: List<String>) {
     if (result.isEmpty()) {
         println("No matching results found.")
-    }
-    else {
+    } else {
         println("Search results:")
         result.forEach { println(it) }
     }
@@ -67,21 +68,26 @@ fun main() {
             (state.size == 1) and (state[0] == "1") -> {
                 try {
                     output(handleEnquiry(file))
-                } catch(error: FileNotFoundException) {
+                } catch (error: FileNotFoundException) {
                     println("File not found. Please, input the existing filename.")
+                } catch (error: UninitializedPropertyAccessException) {
+                    println("Please, enter the filename to start searching.")
                 }
-
             }
+
             (state.size == 1) and (state[0] == "2") -> {
                 try {
                     output(file)
-                } catch(error: FileNotFoundException) {
+                } catch (error: FileNotFoundException) {
                     println("File not found. Please, input the existing filename.")
+                } catch (error: UninitializedPropertyAccessException) {
+                    println("Please, enter the filename to output its contents.")
                 }
             }
+
             (state.size == 1) and (state[0] == "0") -> println("\nBye!")
             (state.size == 2) and (state[0] == "--data") -> file = readFile(state[1])
             else -> println("Input is incorrect.")
         }
-    } while(! ((state.size == 1) and (state[0] == "0")))
+    } while (!((state.size == 1) and (state[0] == "0")))
 }
