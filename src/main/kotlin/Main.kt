@@ -24,7 +24,10 @@ fun readFile(input: String): File {
 
 fun handleEnquiry(file: File): List<String> {
     println("Enter enquiry, please:")
-    val enquiry = readln()
+    var enquiry = ""
+    while (enquiry == "") {
+        enquiry = readln()
+    }
     val result = search(file, enquiry)
 
     return result
