@@ -3,23 +3,18 @@ package search
 import java.io.File
 import java.io.FileNotFoundException
 
-fun menu() {
+fun displayMenu() {
     println("\n=== Menu ===")
     println("1. Search")
     println("2. Print full contents")
+    println("3. Upload data")
     println("0. Exit\n")
-    println("To upload data, please, use --data command with the file path")
 }
 
-fun readFile(input: String): File {
-    val file = File(input)
-
-    println(
-        if (file.exists()) "File is successfully uploaded!"
-        else "Warning: file not found."
-    )
-
-    return file
+fun readFile(): File {
+    println("Please, input the file path:")
+    val filePath = readln()
+    return File(filePath)
 }
 
 fun handleEnquiry(file: File): List<String> {
@@ -59,38 +54,61 @@ fun output(file: File) {
     file.forEachLine { println(it) }
 }
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+enum class States {
+    MENU, EXIT, FILE, SEARCH, DISPLAY
+}
+
 fun main() {
     lateinit var file: File
-
-    do {
-        menu()
-        val state: List<String> = readln().trim().split("\\s+".toRegex()) //ignores extra spaces
-        when {
-            (state.size == 1) and (state[0] == "1") -> {
-                try {
-                    output(handleEnquiry(file))
-                } catch (error: FileNotFoundException) {
-                    println("File not found. Please, input the existing filename.")
-                } catch (error: UninitializedPropertyAccessException) {
-                    println("Please, enter the filename to start searching.")
+    var state = States.MENU
+    var running = true
+    //val invertedIndex: MutableMap<String, Int> =
+    while (running) {
+        when (state) {
+            States.MENU -> {
+                displayMenu()
+                val input = readln().trim()//ignores extra spaces
+                when (input) {
+                    "1" -> state = States.SEARCH
+                    "2" -> state = States.DISPLAY
+                    "3" -> state = States.FILE
+                    "0" -> state = States.EXIT
+                    else -> println("Input is incorrect.")
                 }
             }
 
-            (state.size == 1) and (state[0] == "2") -> {
+            States.DISPLAY -> {
                 try {
                     output(file)
-                } catch (error: FileNotFoundException) {
-                    println("File not found. Please, input the existing filename.")
                 } catch (error: UninitializedPropertyAccessException) {
-                    println("Please, enter the filename to output its contents.")
+                    println("Please, upload the file to output its contents.")
+                }
+                state = States.MENU
+            }
+
+            States.SEARCH -> {
+                try {
+                    output(handleEnquiry(file))
+                } catch (error: UninitializedPropertyAccessException) {
+                    println("Please, upload the file to start searching.")
+                }
+                state = States.MENU
+            }
+
+            States.FILE -> {
+                file = readFile()
+                if (file.exists()) {
+                    println("File is uploaded successfully.")
+                    state = States.MENU
+                } else {
+                    println("File not found.")
                 }
             }
 
-            (state.size == 1) and (state[0] == "0") -> println("\nBye!")
-            (state.size == 2) and (state[0] == "--data") -> file = readFile(state[1])
-            else -> println("Input is incorrect.")
+            States.EXIT -> {
+                running = false
+                println("\nBye!")
+            }
         }
-    } while (!((state.size == 1) and (state[0] == "0")))
+    }
 }
