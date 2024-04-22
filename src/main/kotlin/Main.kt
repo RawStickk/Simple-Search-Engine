@@ -71,23 +71,23 @@ sealed class States : DefaultState() {
 }
 
 sealed class Events : Event {
-    object InputMenu : Events()
-    object InputFile : Events()
+    object Input : Events()
+    //object InputFile : Events()
 }
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 fun main(): Unit = runBlocking {
     val scanner = Scanner(System.`in`)
+    lateinit var file: File
     val searchEngine = createStateMachine(this) {
         addInitialState(States.Menu) {
             onEntry {
                 displayMenu()
             }
-            transitionConditionally<Events.InputMenu> {
+            transitionConditionally<Events.Input> {
                 direction = {
                     val menuInput = scanner.nextLine().trim()
-                    //type = TransitionType.EXTERNAL
                     //println("Menu Input: $menuInput")
                     when (menuInput) {
                         "1" -> targetState(States.Contents)
@@ -102,25 +102,35 @@ fun main(): Unit = runBlocking {
                 }
             }
         }
+        States.ReadFile {
+            transition<Events.Input> {
+                onTriggered {
+                    println("Enter file path:")
+                    val fileInput = scanner.nextLine().trim()
+                    //println("File Input: $fileInput")
+                    when (File(fileInput).exists()) {
+                        true -> {
+                            println("File is read successfully")
+                            file = File(fileInput)
+                            targetState = States.Menu
+                        }
+                        false -> {
+                            println("File not found")
+                            stay()
+                        }
+                    }
+                }
+            }
+        }
         addState(States.ReadFile) {}
         addState(States.Searching) {}
         addState(States.Contents) {}
         addState(States.Exit) {}
     }
-//    val running = true
-//    while (running) {
-//        val inputMenu = readln()
-//
-//    }
-    searchEngine.processEvent(Events.InputMenu)
+    val running = true
+    while (running) {
+        searchEngine.processEvent(Events.Input)
+    }
 }
 
 
-//            println("Enter file path:")
-//            val fileInput = scanner.nextLine().trim()
-//            //println("File Input: $fileInput")
-//            transition<Events.InputFile> {
-//                val file = File(fileInput)
-//                guard = {file.exists()}
-//                targetState = States.Menu
-//            }
