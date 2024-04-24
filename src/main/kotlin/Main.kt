@@ -26,7 +26,7 @@ fun fileNotFoundMessage() {
 
 fun readFile(input: String): File = File(input)
 
-fun handleEnquiry(file: File): List<String> { //TODO: spaces in enquiry
+fun handleEnquiry(file: File): List<String> {
     println("Enter enquiry, please:")
     var enquiry = ""
     while (enquiry == "") {
@@ -76,22 +76,7 @@ object Event : Event
 fun main(): Unit = runBlocking {
     val scanner = Scanner(System.`in`)
     lateinit var file: File
-    var state = States.MENU
-    var running = true
-    //val invertedIndex: MutableMap<String, Int> =
-    while (running) {
-        when (state) {
-            States.MENU -> {
-                displayMenu()
-                val input = readln().trim()//ignores extra spaces
-                when (input) {
-                    "1" -> state = States.SEARCH
-                    "2" -> state = States.DISPLAY
-                    "3" -> state = States.FILE
-                    "0" -> state = States.EXIT
-                    else -> println("Input is incorrect.")
-                }
-            }
+
     var running = true
 
     val searchEngine = createStateMachine(this) {
@@ -111,7 +96,6 @@ fun main(): Unit = runBlocking {
                             stay()
                         }
                     }
-
                 }
             }
         }
