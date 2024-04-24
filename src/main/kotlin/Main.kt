@@ -1,27 +1,36 @@
 package search
 
 import java.io.File
-import java.io.FileNotFoundException
+import ru.nsk.kstatemachine.*
+import kotlinx.coroutines.*
+import ru.nsk.kstatemachine.Event
+import java.util.*
 
 fun displayMenu() {
     println("\n=== Menu ===")
     println("1. Search")
     println("2. Print full contents")
-    println("3. Upload data")
+    println("3. Upload data file")
     println("0. Exit\n")
 }
 
-fun readFile(): File {
-    println("Please, input the file path:")
-    val filePath = readln()
-    return File(filePath)
+fun inputFilePathMessage() {
+    println("Please, enter the file path.")
+    println("To get back to menu, please, use --exit command.")
 }
 
-fun handleEnquiry(file: File): List<String> {
+fun fileNotFoundMessage() {
+    println("File not found.")
+    println("To get back to menu, please, use --exit command.")
+}
+
+fun readFile(input: String): File = File(input)
+
+fun handleEnquiry(file: File): List<String> { //TODO: spaces in enquiry
     println("Enter enquiry, please:")
     var enquiry = ""
     while (enquiry == "") {
-        enquiry = readln()
+        enquiry = readln().trim()
     }
     val result = search(file, enquiry)
 
@@ -54,11 +63,18 @@ fun output(file: File) {
     file.forEachLine { println(it) }
 }
 
-enum class States {
-    MENU, EXIT, FILE, SEARCH, DISPLAY
+sealed class States : DefaultState() {
+    object Menu : States()
+    object ReadFile : States()
+    object Contents : States()
+    object Searching : States()
+    object Exit : States(), FinalState
 }
 
-fun main() {
+object Event : Event
+
+fun main(): Unit = runBlocking {
+    val scanner = Scanner(System.`in`)
     lateinit var file: File
     var state = States.MENU
     var running = true
@@ -76,39 +92,89 @@ fun main() {
                     else -> println("Input is incorrect.")
                 }
             }
+    var running = true
 
-            States.DISPLAY -> {
-                try {
-                    output(file)
-                } catch (error: UninitializedPropertyAccessException) {
-                    println("Please, upload the file to output its contents.")
+    val searchEngine = createStateMachine(this) {
+        addInitialState(States.Menu) {
+            onEntry { displayMenu() }
+            transitionConditionally<Event> {
+                direction = {
+                    val menuInput = scanner.nextLine().trim()
+                    //println("Menu Input: $menuInput")
+                    when (menuInput) {
+                        "1" -> targetState(States.Searching)
+                        "2" -> targetState(States.Contents)
+                        "3" -> targetState(States.ReadFile)
+                        "0" -> targetState(States.Exit)
+                        else -> {
+                            println("Wrong input")
+                            stay()
+                        }
+                    }
+
                 }
-                state = States.MENU
             }
+        }
+        addState(States.ReadFile) {
+            onEntry { inputFilePathMessage() }
+            transitionConditionally<Event> {
+                direction = {
+                    //println("Menu Input: $menuInput")
+                    when (val filePath = scanner.nextLine().trim()) {
+                        "--exit" -> {
+                            targetState(States.Menu)
+                        }
+                        else -> {
+                            val data = readFile(filePath)
+                            when(data.exists()) {
+                                true -> {
+                                    println("File is read successfully")
+                                    file = data
+                                    targetState(States.Menu)
+                                }
+                                false -> {
+                                    fileNotFoundMessage()
+                                    stay()
+                                }
+                            }
+                        }
+                    }
 
-            States.SEARCH -> {
+                }
+            }
+        }
+        addState(States.Searching) {
+            onEntry {
                 try {
                     output(handleEnquiry(file))
                 } catch (error: UninitializedPropertyAccessException) {
-                    println("Please, upload the file to start searching.")
-                }
-                state = States.MENU
-            }
-
-            States.FILE -> {
-                file = readFile()
-                if (file.exists()) {
-                    println("File is uploaded successfully.")
-                    state = States.MENU
-                } else {
-                    println("File not found.")
+                    println("To start searching, please, upload data first.")
                 }
             }
-
-            States.EXIT -> {
-                running = false
-                println("\nBye!")
+            transition<Event> {
+                targetState = States.Menu
             }
         }
+        addState(States.Contents) {
+            onEntry {
+                try {
+                    output(file)
+                } catch (error: UninitializedPropertyAccessException) {
+                    println("To display file contents, please, upload data first.")
+                }
+            }
+            transition<Event> {
+                targetState = States.Menu
+            }
+        }
+        addState(States.Exit) {
+            onEntry {
+                println("Bye!")
+                running = false
+            }
+        }
+    }
+    while (running) {
+        searchEngine.processEvent(Event)
     }
 }
