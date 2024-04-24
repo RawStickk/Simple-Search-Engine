@@ -3,6 +3,7 @@ package search
 import java.io.File
 import ru.nsk.kstatemachine.*
 import kotlinx.coroutines.*
+import ru.nsk.kstatemachine.Event
 import java.util.*
 
 fun displayMenu() {
@@ -23,16 +24,7 @@ fun fileNotFoundMessage() {
     println("To get back to menu, please, use --exit command.")
 }
 
-fun readFile(input: String): File {
-    val file = File(input)
-
-    println(
-        if (file.exists()) "File is successfully uploaded!"
-        else "Warning: file not found."
-    )
-
-    return file
-}
+fun readFile(input: String): File = File(input)
 
 fun handleEnquiry(file: File): List<String> { //TODO: spaces in enquiry
     println("Enter enquiry, please:")
@@ -79,9 +71,7 @@ sealed class States : DefaultState() {
     object Exit : States(), FinalState
 }
 
-sealed class Events : Event {
-    object Input : Events()
-}
+object Event : Event
 
 fun main(): Unit = runBlocking {
     val scanner = Scanner(System.`in`)
@@ -92,7 +82,7 @@ fun main(): Unit = runBlocking {
     val searchEngine = createStateMachine(this) {
         addInitialState(States.Menu) {
             onEntry { displayMenu() }
-            transitionConditionally<Events.Input> {
+            transitionConditionally<Event> {
                 direction = {
                     val menuInput = scanner.nextLine().trim()
                     //println("Menu Input: $menuInput")
@@ -112,7 +102,7 @@ fun main(): Unit = runBlocking {
         }
         addState(States.ReadFile) {
             onEntry { inputFilePathMessage() }
-            transitionConditionally<Events.Input> {
+            transitionConditionally<Event> {
                 direction = {
                     //println("Menu Input: $menuInput")
                     when (val filePath = scanner.nextLine().trim()) {
@@ -120,10 +110,11 @@ fun main(): Unit = runBlocking {
                             targetState(States.Menu)
                         }
                         else -> {
-                            when(File(filePath).exists()) {
+                            val data = readFile(filePath)
+                            when(data.exists()) {
                                 true -> {
                                     println("File is read successfully")
-                                    file = File(filePath)
+                                    file = data
                                     targetState(States.Menu)
                                 }
                                 false -> {
@@ -145,7 +136,7 @@ fun main(): Unit = runBlocking {
                     println("To start searching, please, upload data first.")
                 }
             }
-            transition<Events> {
+            transition<Event> {
                 targetState = States.Menu
             }
         }
@@ -157,7 +148,7 @@ fun main(): Unit = runBlocking {
                     println("To display file contents, please, upload data first.")
                 }
             }
-            transition<Events> {
+            transition<Event> {
                 targetState = States.Menu
             }
         }
@@ -169,8 +160,6 @@ fun main(): Unit = runBlocking {
         }
     }
     while (running) {
-        searchEngine.processEvent(Events.Input)
+        searchEngine.processEvent(Event)
     }
 }
-
-
