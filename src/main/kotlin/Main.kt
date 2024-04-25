@@ -4,7 +4,6 @@ import java.io.File
 import ru.nsk.kstatemachine.*
 import kotlinx.coroutines.*
 import ru.nsk.kstatemachine.Event
-import java.util.*
 
 fun displayMenu() {
     println("\n=== Menu ===")
@@ -71,20 +70,17 @@ sealed class States : DefaultState() {
     object Exit : States(), FinalState
 }
 
-object Event : Event
+object SwitchEvent : Event
 
-fun main(): Unit = runBlocking {
-    val scanner = Scanner(System.`in`)
+fun main() = runBlocking {
     lateinit var file: File
-
-    var running = true
 
     val searchEngine = createStateMachine(this) {
         addInitialState(States.Menu) {
             onEntry { displayMenu() }
-            transitionConditionally<Event> {
+            transitionConditionally<SwitchEvent> {
                 direction = {
-                    val menuInput = scanner.nextLine().trim()
+                    val menuInput = readln().trim()
                     //println("Menu Input: $menuInput")
                     when (menuInput) {
                         "1" -> targetState(States.Searching)
@@ -96,17 +92,15 @@ fun main(): Unit = runBlocking {
                             stay()
                         }
                     }
-
-
                 }
             }
         }
         addState(States.ReadFile) {
             onEntry { inputFilePathMessage() }
-            transitionConditionally<Event> {
+            transitionConditionally<SwitchEvent> {
                 direction = {
                     //println("Menu Input: $menuInput")
-                    when (val filePath = scanner.nextLine().trim()) {
+                    when (val filePath = readln().trim()) {
                         "--exit" -> {
                             targetState(States.Menu)
                         }
@@ -136,7 +130,7 @@ fun main(): Unit = runBlocking {
                     println("To start searching, please, upload data first.")
                 }
             }
-            transition<Event> {
+            transition<SwitchEvent> {
                 targetState = States.Menu
             }
         }
@@ -148,18 +142,14 @@ fun main(): Unit = runBlocking {
                     println("To display file contents, please, upload data first.")
                 }
             }
-            transition<Event> {
+            transition<SwitchEvent> {
                 targetState = States.Menu
             }
         }
-        addState(States.Exit) {
-            onEntry {
-                println("Bye!")
-                running = false
-            }
-        }
+        addFinalState(States.Exit)
+        onFinished { println("Bye!") }
     }
-    while (running) {
-        searchEngine.processEvent(Event)
+    while (!searchEngine.isFinished) {
+        searchEngine.processEvent(SwitchEvent)
     }
 }
