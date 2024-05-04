@@ -104,19 +104,19 @@ fun main() = runBlocking {
                         "--exit" -> {
                             targetState(States.Menu)
                         }
+
                         else -> {
                             val data = readFile(filePath)
-                            when(data.exists()) {
-                                true -> {
-                                    println("File is read successfully")
-                                    file = data
-                                    targetState(States.Menu)
-                                }
-                                false -> {
-                                    fileNotFoundMessage()
-                                    stay()
-                                }
+
+                            if (data.exists()) {
+                                println("File is read successfully")
+                                file = data
+                                targetState(States.Menu)
+                            } else {
+                                fileNotFoundMessage()
+                                stay()
                             }
+
                         }
                     }
                 }
