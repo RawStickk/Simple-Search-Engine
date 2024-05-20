@@ -19,7 +19,6 @@ fun inputFilePathMessage() {
 
 fun fileNotFoundMessage() {
     println("File not found.")
-    println("To get back to menu, please, use --exit command.")
 }
 
 fun readFile(input: String): File = File(input)
@@ -62,13 +61,20 @@ fun output(file: File) {
 
 sealed class States : DefaultState() {
     object Menu : States()
-    object ReadFile : States()
+    object ReadFilePath : States()
     object Contents : States()
     object Searching : States()
+    object FileLoad : States()
     object Exit : States(), FinalState
 }
 
-object SwitchEvent : Event
+sealed class Events : Event {
+    class MenuInput(val input: String) : Events()
+    class FilePathInput(val filePath: String) : Events()
+    data object Search : Events()
+    data object DisplayContents : Events()
+    class FileLoadingEvent(val filePath: String): Events()
+}
 
 fun main() = runBlocking {
     val searchEngine = createStateMachine(this) {
@@ -76,13 +82,12 @@ fun main() = runBlocking {
 
         addInitialState(States.Menu) {
             onEntry { displayMenu() }
-            transitionConditionally<SwitchEvent> {
+            transitionConditionally<Events.MenuInput> {
                 direction = {
-                    val menuInput = readln().trim()
-                    when (menuInput) {
+                    when (event.input) {
                         "1" -> targetState(States.Searching)
                         "2" -> targetState(States.Contents)
-                        "3" -> targetState(States.ReadFile)
+                        "3" -> targetState(States.ReadFilePath)
                         "0" -> targetState(States.Exit)
                         else -> {
                             println("Wrong input")
@@ -92,23 +97,29 @@ fun main() = runBlocking {
                 }
             }
         }
-        addState(States.ReadFile) {
+        addState(States.ReadFilePath) {
             onEntry { inputFilePathMessage() }
-            transitionConditionally<SwitchEvent> {
+            transitionConditionally<Events.FilePathInput> {
                 direction = {
-                    val filePath = readln().trim()
-                    if (filePath == "--exit") {
+                    if (event.filePath == "--exit") {
                         targetState(States.Menu)
                     } else {
-                        val data = readFile(filePath)
-                        if (data.exists()) {
-                            println("File is read successfully")
-                            file = data
-                            targetState(States.Menu)
-                        } else {
-                            fileNotFoundMessage()
-                            noTransition()
-                        }
+                        targetState(States.FileLoad)
+                    }
+                }
+            }
+        }
+        addState(States.FileLoad) {
+            transitionConditionally<Events.FileLoadingEvent> {
+                direction = {
+                    val data = readFile(event.filePath)
+                    if (data.exists()) {
+                        println("File is read successfully")
+                        file = data
+                        targetState(States.Menu)
+                    } else {
+                        fileNotFoundMessage()
+                        targetState(States.ReadFilePath)
                     }
                 }
             }
@@ -121,7 +132,7 @@ fun main() = runBlocking {
                     println("To start searching, please, upload data first.")
                 }
             }
-            transition<SwitchEvent> {
+            transition<Events.Search> {
                 targetState = States.Menu
             }
         }
@@ -133,7 +144,7 @@ fun main() = runBlocking {
                     println("To display file contents, please, upload data first.")
                 }
             }
-            transition<SwitchEvent> {
+            transition<Events.DisplayContents> {
                 targetState = States.Menu
             }
         }
@@ -142,6 +153,24 @@ fun main() = runBlocking {
     }
 
     while (!searchEngine.isFinished) {
-        searchEngine.processEvent(SwitchEvent)
+        when {
+            States.Menu.isActive -> {
+                searchEngine.processEvent(Events.MenuInput(readln().trim()))
+            }
+
+            States.ReadFilePath.isActive -> {
+                val filePath = readln().trim()
+                searchEngine.processEvent(Events.FilePathInput(filePath))
+                searchEngine.processEvent(Events.FileLoadingEvent(filePath))
+            }
+
+            States.Searching.isActive -> {
+                searchEngine.processEvent(Events.Search)
+            }
+
+            States.Contents.isActive -> {
+                searchEngine.processEvent(Events.DisplayContents)
+            }
+        }
     }
 }
