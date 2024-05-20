@@ -3,7 +3,6 @@ package search
 import java.io.File
 import ru.nsk.kstatemachine.*
 import kotlinx.coroutines.*
-import ru.nsk.kstatemachine.Event
 
 fun displayMenu() {
     println("\n=== Menu ===")
@@ -25,7 +24,7 @@ fun fileNotFoundMessage() {
 
 fun readFile(input: String): File = File(input)
 
-fun handleEnquiry(file: File): List<String> { //TODO: spaces in enquiry
+fun handleEnquiry(file: File): List<String> {
     println("Enter enquiry, please:")
     var enquiry = ""
     while (enquiry == "") {
@@ -44,7 +43,6 @@ fun search(file: File, enquiry: String): List<String> {
             result.add(it)
         }
     }
-
     return result.toList()
 }
 
@@ -73,15 +71,14 @@ sealed class States : DefaultState() {
 object SwitchEvent : Event
 
 fun main() = runBlocking {
-    lateinit var file: File
-
     val searchEngine = createStateMachine(this) {
+        lateinit var file: File
+
         addInitialState(States.Menu) {
             onEntry { displayMenu() }
             transitionConditionally<SwitchEvent> {
                 direction = {
                     val menuInput = readln().trim()
-                    //println("Menu Input: $menuInput")
                     when (menuInput) {
                         "1" -> targetState(States.Searching)
                         "2" -> targetState(States.Contents)
@@ -89,7 +86,7 @@ fun main() = runBlocking {
                         "0" -> targetState(States.Exit)
                         else -> {
                             println("Wrong input")
-                            stay()
+                            noTransition()
                         }
                     }
                 }
@@ -99,24 +96,18 @@ fun main() = runBlocking {
             onEntry { inputFilePathMessage() }
             transitionConditionally<SwitchEvent> {
                 direction = {
-                    //println("Menu Input: $menuInput")
-                    when (val filePath = readln().trim()) {
-                        "--exit" -> {
+                    val filePath = readln().trim()
+                    if (filePath == "--exit") {
+                        targetState(States.Menu)
+                    } else {
+                        val data = readFile(filePath)
+                        if (data.exists()) {
+                            println("File is read successfully")
+                            file = data
                             targetState(States.Menu)
-                        }
-
-                        else -> {
-                            val data = readFile(filePath)
-
-                            if (data.exists()) {
-                                println("File is read successfully")
-                                file = data
-                                targetState(States.Menu)
-                            } else {
-                                fileNotFoundMessage()
-                                stay()
-                            }
-
+                        } else {
+                            fileNotFoundMessage()
+                            noTransition()
                         }
                     }
                 }
@@ -149,6 +140,7 @@ fun main() = runBlocking {
         addFinalState(States.Exit)
         onFinished { println("Bye!") }
     }
+
     while (!searchEngine.isFinished) {
         searchEngine.processEvent(SwitchEvent)
     }
