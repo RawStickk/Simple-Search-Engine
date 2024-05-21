@@ -45,7 +45,7 @@ fun search(file: File, enquiry: String): List<String> {
     return result.toList()
 }
 
-fun output(result: List<String>) {
+fun outputSearchResults(result: List<String>) {
     if (result.isEmpty()) {
         println("No matching results found.")
     } else {
@@ -54,7 +54,7 @@ fun output(result: List<String>) {
     }
 }
 
-fun output(file: File) {
+fun outputFileContents(file: File) {
     println("File contents:\n")
     file.forEachLine { println(it) }
 }
@@ -113,7 +113,7 @@ fun main() = runBlocking {
             transitionConditionally<Events.FileLoadingEvent> {
                 direction = {
                     val data = readFile(event.filePath)
-                    if (data.exists()) {
+                    if (data.exists() and data.isFile) {
                         println("File is read successfully")
                         file = data
                         targetState(States.Menu)
@@ -127,7 +127,7 @@ fun main() = runBlocking {
         addState(States.Searching) {
             onEntry {
                 try {
-                    output(handleEnquiry(file))
+                    outputSearchResults(handleEnquiry(file))
                 } catch (error: UninitializedPropertyAccessException) {
                     println("To start searching, please, upload data first.")
                 }
@@ -139,7 +139,7 @@ fun main() = runBlocking {
         addState(States.Contents) {
             onEntry {
                 try {
-                    output(file)
+                    outputFileContents(file)
                 } catch (error: UninitializedPropertyAccessException) {
                     println("To display file contents, please, upload data first.")
                 }
